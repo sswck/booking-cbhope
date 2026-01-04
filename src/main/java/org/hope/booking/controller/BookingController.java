@@ -1,6 +1,7 @@
 package org.hope.booking.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.hope.booking.domain.reservation.Reservation;
 import org.hope.booking.dto.BookingFormDto;
 import org.hope.booking.service.FacilityService;
 import org.hope.booking.service.ReservationService;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.security.Principal;
+import java.util.List;
 
 @Controller
 @RequestMapping("/booking")
@@ -38,5 +40,13 @@ public class BookingController {
 
             return "booking/booking-form";
         }
+    }
+
+    @GetMapping("/my-list")
+    public String myReservations(Principal principal, Model model) {
+        List<Reservation> reservations = reservationService.findMyReservations(principal.getName());
+        model.addAttribute("reservations", reservations);
+
+        return "booking/my-list";
     }
 }

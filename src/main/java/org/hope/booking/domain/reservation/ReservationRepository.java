@@ -1,6 +1,7 @@
 package org.hope.booking.domain.reservation;
 
 import org.hope.booking.domain.facility.Facility;
+import org.hope.booking.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,4 +15,6 @@ public interface ReservationRepository extends JpaRepository<Reservation,Long> {
     List<Reservation> findOverlappingReservations(@Param("facility") Facility facility,
                                                   @Param("start") LocalDateTime start,
                                                   @Param("end") LocalDateTime end);
+
+    List<Reservation> findByUserOrderByStartTimeDesc(User user);
 }
