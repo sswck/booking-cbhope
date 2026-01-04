@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>예약 신청</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .booking-container { max-width: 600px; margin: 50px auto; }
+    </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">충북청년희망센터</a>
+        <a href="/" class="btn btn-outline-light btn-sm">메인으로</a>
+    </div>
+</nav>
+
+<div class="container booking-container bg-white p-5 rounded shadow">
+    <h2 class="text-center mb-4">시설 예약 신청</h2>
+
+    <form action="/booking/new" method="post">
+        <div class="mb-3">
+            <label for="facilityId" class="form-label">사용할 시설</label>
+            <select class="form-select" id="facilityId" name="facilityId" required>
+                <option value="">시설을 선택하세요</option>
+                <option th:each="facility : ${facilities}"
+                        th:value="${facility.id}"
+                        th:text="${facility.name} + ' (' + ${facility.description} + ')'">
+                    상담실 1
+                </option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="startDateTime" class="form-label">시작 시간</label>
+            <input type="datetime-local" class="form-control" id="startDateTime" name="startDateTime" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="endDateTime" class="form-label">종료 시간</label>
+            <input type="datetime-local" class="form-control" id="endDateTime" name="endDateTime" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="purpose" class="form-label">사용 목적</label>
+            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="예: 멘토링 진행, 팀 회의 등" required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg">예약하기</button>
+    </form>
+</div>
+
+</body>
+</html>
