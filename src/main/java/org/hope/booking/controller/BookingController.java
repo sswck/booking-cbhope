@@ -49,4 +49,9 @@ public class BookingController {
 
         return "booking/my-list";
     }
+
+    @GetMapping("/status")
+    public String statusPage() {
+        return "booking/status";
+    }
 }
