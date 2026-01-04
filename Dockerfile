@@ -4,8 +4,8 @@ WORKDIR /home/gradle/src
 RUN gradle build --no-daemon -x test
 
 FROM openjdk:17-jdk-slim
-mkdir /app
+WORKDIR /app
 COPY --from=build /home/gradle/src/build/libs/*.jar /app/app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["top", "-b"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
