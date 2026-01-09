@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 페이지 - 예약 관리</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-danger mb-4">
+    <div class="container">
+        <a class="navbar-brand" href="/">충북청년미래센터</a>
+        <div>
+            <span class="text-white me-3">관리자님 안녕하세요</span>
+            <a href="/" class="btn btn-outline-light btn-sm">메인으로</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container bg-white p-5 rounded shadow">
+    <h2 class="text-center mb-4 text-danger">전체 예약 통합 관리</h2>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+            <tr>
+                <th>예약자</th>
+                <th>시설명</th>
+                <th>시간</th>
+                <th>사용 목적</th>
+                <th>관리</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="reservation : ${reservations}">
+                <td>
+                    <span class="fw-bold" th:text="${reservation.user.name}">홍길동</span>
+                    <br>
+                    <span class="text-muted small" th:text="'(' + ${reservation.user.username} + ')'">user1</span>
+                </td>
+                <td th:text="${reservation.facility.name}">상담실 3</td>
+                <td>
+                    <span class="badge bg-primary" th:text="${#temporals.format(reservation.startTime, 'yyyy-MM-dd')}"></span>
+                    <br>
+                    <span th:text="${#temporals.format(reservation.startTime, 'HH:mm')} + ' ~ ' + ${#temporals.format(reservation.endTime, 'HH:mm')}">14:00 ~ 15:00</span>
+                </td>
+                <td th:text="${reservation.purpose}">회의</td>
+                <td>
+                    <form th:action="@{/admin/reservations/{id}/cancel(id=${reservation.id})}" method="post"
+                          onsubmit="return confirm('정말 이 예약을 삭제하시겠습니까?');">
+                        <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

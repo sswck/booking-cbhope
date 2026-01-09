@@ -17,4 +17,5 @@ public interface ReservationRepository extends JpaRepository<Reservation,Long> {
                                                   @Param("end") LocalDateTime end);
 
     List<Reservation> findByUserOrderByStartTimeDesc(User user);
+    List<Reservation> findAllByOrderByStartTimeDesc();
 }
