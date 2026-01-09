@@ -18,11 +18,9 @@ public class DataInit {
             if (facilityRepository.count() == 0) {
                 System.out.println("========== 초기 시설물 데이터를 생성합니다 ==========");
 
-                facilityRepository.save(new Facility("상담실 1", "4인용 테이블, 화이트보드 구비"));
-                facilityRepository.save(new Facility("상담실 2", "4인용 테이블, 프린터 구비"));
-                facilityRepository.save(new Facility("상담실 3", "6인용 테이블, 빔프로젝터 구비"));
+                facilityRepository.save(new Facility("상담실 3", "상담실 3입니다."));
 
-                System.out.println("========== 시설물 데이터 생성 완료 (3건) ==========");
+                System.out.println("========== 시설물 생성 완료 ==========");
             }
         };
     }
