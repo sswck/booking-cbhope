@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>예약 신청</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
     <style>
         .booking-container { max-width: 600px; margin: 50px auto; }
+        option:disabled { background-color: #e9ecef; color: #adb5bd; }
+        .flatpickr-input { background-color: white !important; }
     </style>
 </head>
 <body class="bg-light">
@@ -24,37 +28,205 @@
         <span th:text="${errorMessage}">에러 메시지</span>
     </div>
 
-    <form th:action="@{/booking/new}" method="post">
-        <div class="mb-3">
-            <label for="facilityId" class="form-label">사용할 시설</label>
-            <select class="form-select" id="facilityId" name="facilityId" required>
-                <option value="">시설을 선택하세요</option>
+    <form th:action="@{/booking/new}" method="post" id="bookingForm">
+
+        <div class="mb-4">
+            <label for="facilityId" class="form-label fw-bold">1. 시설 선택</label>
+            <select class="form-select" id="facilityId" name="facilityId" required onchange="loadSlots()">
                 <option th:each="facility : ${facilities}"
                         th:value="${facility.id}"
-                        th:text="${facility.name} + ' (' + ${facility.description} + ')'">
-                    상담실 1
+                        th:text="${facility.name}"
+                        th:selected="${facility.name.contains('상담실 3')}">
                 </option>
             </select>
         </div>
 
-        <div class="mb-3">
-            <label for="startDateTime" class="form-label">시작 시간</label>
-            <input type="datetime-local" class="form-control" id="startDateTime" name="startDateTime" required>
+        <div class="mb-4">
+            <label for="datePicker" class="form-label fw-bold">2. 날짜 선택</label>
+            <input type="text" class="form-control" id="datePicker" placeholder="날짜를 선택하세요" required>
+            <div id="dateDisplay" class="form-text text-primary fw-bold mt-2"></div>
         </div>
 
-        <div class="mb-3">
-            <label for="endDateTime" class="form-label">종료 시간</label>
-            <input type="datetime-local" class="form-control" id="endDateTime" name="endDateTime" required>
+        <div class="mb-4">
+            <label class="form-label fw-bold">3. 시간 선택</label>
+            <div class="row g-2 align-items-center">
+                <div class="col-5">
+                    <select class="form-select" id="startTimeSelect" required onchange="updateEndTimeOptions()">
+                        <option value="">시작 시간</option>
+                    </select>
+                </div>
+                <div class="col-2 text-center">~</div>
+                <div class="col-5">
+                    <select class="form-select" id="endTimeSelect" required>
+                        <option value="">종료 시간</option>
+                    </select>
+                </div>
+            </div>
+            <div id="loadingSpinner" class="spinner-border text-primary mt-2 d-none" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label for="purpose" class="form-label">사용 목적</label>
-            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="예: 멘토링 진행, 팀 회의 등" required></textarea>
+        <div class="mb-4">
+            <label for="purpose" class="form-label fw-bold">4. 사용 목적</label>
+            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="예: 멘토링, 팀 회의" required></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary w-100 btn-lg">예약하기</button>
+        <input type="hidden" id="startDateTime" name="startDateTime">
+        <input type="hidden" id="endDateTime" name="endDateTime">
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg" onclick="return validateForm()">예약하기</button>
     </form>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+
+<script>
+    let currentSlots = []; // API에서 받아온 슬롯 정보 저장
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Flatpickr 달력 초기화
+        flatpickr("#datePicker", {
+            locale: "ko",         // 한국어 설정
+            minDate: "today",     // 오늘 이전 날짜 선택 불가 (요구사항 경험 개선)
+            dateFormat: "Y-m-d",  // 값 포맷 (2026-01-09)
+            defaultDate: "today", // 오늘 날짜 기본 선택
+            onChange: function(selectedDates, dateStr, instance) {
+                // 날짜가 변경되면 슬롯 다시 로딩
+                loadSlots();
+            }
+        });
+
+        // 페이지 로드 시 슬롯 로딩
+        loadSlots();
+    });
+
+    // 날짜 포맷팅 (YYYY년 MM월 DD일 (요일))
+    function formatDateDisplay(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, '0')}월 ${String(date.getDate()).padStart(2, '0')}일 (${days[date.getDay()]})`;
+    }
+
+    // 1. API 호출해서 예약 상황 가져오기
+    function loadSlots() {
+        const facilityId = document.getElementById('facilityId').value;
+        const date = document.getElementById('datePicker').value;
+        const startSelect = document.getElementById('startTimeSelect');
+        const endSelect = document.getElementById('endTimeSelect');
+        const spinner = document.getElementById('loadingSpinner');
+        const dateDisplay = document.getElementById('dateDisplay');
+
+        if (!facilityId || !date) return;
+
+        // 날짜 텍스트 업데이트
+        dateDisplay.textContent = formatDateDisplay(date);
+
+        // 초기화
+        startSelect.innerHTML = '<option value="">시작 시간</option>';
+        endSelect.innerHTML = '<option value="">종료 시간</option>';
+        endSelect.disabled = true;
+        spinner.classList.remove('d-none');
+
+        fetch(`/api/bookings/available-slots?facilityId=${facilityId}&date=${date}`)
+            .then(res => res.json())
+            .then(slots => {
+                currentSlots = slots; // 전역 변수에 저장
+                spinner.classList.add('d-none');
+
+                slots.forEach(slot => {
+                    const option = document.createElement('option');
+                    // 시간 포맷 정리 (09:00:00 -> 09:00)
+                    option.value = slot.time.substring(0, 5);
+                    option.textContent = slot.time.substring(0, 5);
+
+                    // 이미 예약된 시간은 선택 불가 (회색 처리)
+                    if (!slot.available) {
+                        option.disabled = true;
+                        option.textContent += ' (마감)';
+                    }
+                    startSelect.appendChild(option);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                spinner.classList.add('d-none');
+                // alert("예약 정보를 불러오는데 실패했습니다."); // 로딩 시점에 뜨면 귀찮으므로 주석 처리
+            });
+    }
+
+    // 2. 시작 시간 선택 시 -> 종료 시간 옵션 계산 (핵심 로직!)
+    function updateEndTimeOptions() {
+        const startSelect = document.getElementById('startTimeSelect');
+        const endSelect = document.getElementById('endTimeSelect');
+        const startTime = startSelect.value; // "14:00"
+
+        endSelect.innerHTML = '<option value="">종료 시간</option>';
+
+        if (!startTime) {
+            endSelect.disabled = true;
+            return;
+        }
+
+        endSelect.disabled = false;
+
+        let startIndex = currentSlots.findIndex(s => s.time.startsWith(startTime));
+
+        // 시작 시간 다음 슬롯부터 루프를 돌며 종료 가능 시간 추가
+        for (let i = startIndex + 1; i <= currentSlots.length; i++) {
+            let timeStr;
+            let isAvailable = true;
+
+            if (i < currentSlots.length) {
+                timeStr = currentSlots[i].time.substring(0, 5);
+                // 내가 종료하려는 이 시간이 '마감' 상태라면?
+                if (!currentSlots[i].available) {
+                    isAvailable = false;
+                }
+            } else {
+                // 운영 종료 시간 (마지막 슬롯 + 30분)
+                let lastSlot = currentSlots[currentSlots.length - 1];
+                let [h, m] = lastSlot.time.split(':').map(Number);
+                m += 30;
+                if(m >= 60) { h++; m-=60; }
+                timeStr = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+            }
+
+            const option = document.createElement('option');
+            option.value = timeStr;
+            option.textContent = timeStr;
+            endSelect.appendChild(option);
+
+            // 가로막는 예약(마감)을 만나면 더 이상 뒤의 시간은 추가하지 않고 반복 종료
+            if (!isAvailable) break;
+
+            // 현재 구간이 마감이면 중단
+            if (i < currentSlots.length && !currentSlots[i].available) {
+                break;
+            }
+        }
+    }
+
+    // 3. 폼 전송 전 데이터 조합
+    function validateForm() {
+        const date = document.getElementById('datePicker').value;
+        const startTime = document.getElementById('startTimeSelect').value;
+        const endTime = document.getElementById('endTimeSelect').value;
+
+        if (!date || !startTime || !endTime) {
+            alert('날짜와 시간을 모두 선택해주세요.');
+            return false;
+        }
+
+        // hidden input에 값 설정
+        document.getElementById('startDateTime').value = date + 'T' + startTime + ':00';
+        document.getElementById('endDateTime').value = date + 'T' + endTime + ':00';
+
+        return true;
+    }
+</script>
 
 </body>
 </html>
